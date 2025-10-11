@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Downloads - StudyMint Portal</title>
+<style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: Arial, sans-serif; background-color: #f0f4ff; color: #002b5c; }
+    nav { background-color: #002b5c; padding: 10px 20px; display: flex; justify-content: space-around; box-shadow: 0 4px 15px rgba(0, 43, 92, 0.3); }
+    nav a { color: white; text-decoration: none; font-weight: bold; padding: 8px 16px; border-radius: 6px; transition: background-color 0.3s ease, transform 0.2s ease; }
+    nav a:hover { background-color: #004c99; transform: translateY(-2px); }
+    
+    .page { display: block; padding: 30px; animation: fadeIn 0.5s ease; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    
+    .panel { background: white; padding: 25px; border-radius: 10px; box-shadow: 0 8px 25px rgba(0,43,92,0.15); max-width: 800px; margin: 40px auto; text-align: center; }
+    
+    .btn { background-color: #004c99; color: white; padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; margin-top: 10px; transition: all 0.3s ease; font-size: 1rem; }
+    .btn:hover { background-color: #003d7a; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,76,153,0.3); }
+    .btn:active { transform: translateY(0); }
+    .download-btn { background-color: #28a745; }
+    .download-btn:hover { background-color: #218838; }
+    
+    .search-container {
+        display: flex;
+        gap: 15px;
+        margin-bottom: 20px;
+        align-items: center;
+    }
+    #category-filter, #search-bar {
+        padding: 12px;
+        border: 1px solid #ccc;
+        border-radius: 6px;
+        font-size: 1rem;
+        background-color: white;
+        transition: all 0.3s ease;
+    }
+    #category-filter:focus, #search-bar:focus {
+        outline: none;
+        border-color: #004c99;
+        box-shadow: 0 0 0 3px rgba(0,76,153,0.1);
+    }
+    #search-bar { flex-grow: 1; }
+
+    .download-item { 
+        display: flex; 
+        align-items: center; 
+        justify-content: space-between; 
+        padding: 15px; 
+        margin: 15px 0; 
+        background-color: #f8f9fa; 
+        border-radius: 8px; 
+        border: 1px solid #e9ecef; 
+        cursor: pointer; 
+        text-align: left;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        animation: slideIn 0.4s ease backwards;
+    }
+    .download-item:nth-child(1) { animation-delay: 0.05s; }
+    .download-item:nth-child(2) { animation-delay: 0.1s; }
+    .download-item:nth-child(3) { animation-delay: 0.15s; }
+    .download-item:nth-child(4) { animation-delay: 0.2s; }
+    .download-item:nth-child(5) { animation-delay: 0.25s; }
+    
+    @keyframes slideIn {
+        from { opacity: 0; transform: translateX(-20px); }
+        to { opacity: 1; transform: translateX(0); }
+    }
+    
+    .download-item:hover { 
+        transform: translateY(-3px); 
+        box-shadow: 0 8px 20px rgba(0,43,92,0.15);
+        border-color: #004c99;
+        background-color: #fff;
+    }
+    .file-name { font-weight: bold; color: #002b5c; transition: color 0.3s ease; }
+    .download-item:hover .file-name { color: #004c99; }
+    .file-tags { color: #5a7a9a; font-size: 0.8em; margin-top: 4px; }
+    
+    .message-success { color:#28a745; font-weight: bold; }
+    .message-error { color:#dc3545; font-weight: bold; }
+
+    /* Modal Styles with Smooth Animations */
+    .modal {
+        position: fixed; 
+        top: 0; 
+        left: 0; 
+        width: 100%; 
+        height: 100%;
+        background-color: rgba(0,0,0,0);
+        display: flex;
+        visibility: hidden; 
+        opacity: 0; 
+        transition: opacity 0.3s ease, visibility 0.3s ease, background-color 0.3s ease; 
+        align-items: center; 
+        justify-content: center;
+        z-index: 1000; 
+        backdrop-filter: blur(0px);
+    }
+    
+    .modal.show {
+        visibility: visible;
+        opacity: 1;
+        background-color: rgba(0,0,0,0.6);
+        backdrop-filter: blur(5px);
+    }
+    
+    .modal-content, .login-container {
+        background: white; 
+        border-radius: 10px;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        transform: scale(0.9) translateY(20px);
+        opacity: 0;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    .modal.show .modal-content,
+    .modal.show .login-container {
+        transform: scale(1) translateY(0);
+        opacity: 1;
+    }
+    
+    .modal-content {
+        width: 90%; 
+        max-width: 800px;
+        height: 90vh;
+        display: flex; 
+        flex-direction: column;
+    }
+    
+    .modal-header { 
+        padding: 15px; 
+        border-bottom: 1px solid #eee; 
+        display: flex; 
+        justify-content: space-between; 
+        align-items: center; 
+    }
+    .modal-title { font-size: 1.2rem; font-weight: bold; }
+    .modal-body { flex-grow: 1; overflow: hidden; }
+    .modal-body iframe { width: 100%; height: 100%; border: none; }
+    .modal-footer { 
+        padding: 15px; 
+        border-top: 1px solid #eee; 
+        text-align: right; 
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .login-container { 
+        width: 90%;
+        max-width: 400px; 
+    }
+    .login-section { 
+        padding: 30px; 
+        display: flex; 
+        flex-direction: column; 
+        align-items: center; 
+        justify-content: center; 
+    }
+    .login-section h2 { margin-top: 0; color: #002b5c; }
+    
+    input { 
+        width: 100%; 
+        padding: 12px; 
+        margin: 10px 0; 
+        border-radius: 6px; 
+        border: 1px solid #ccc; 
+        font-size: 1rem;
+        transition: all 0.3s ease;
+    }
+    input:focus {
+        outline: none;
+        border-color: #004c99;
+        box-shadow: 0 0 0 3px rgba(0,76,153,0.1);
+    }
+    
+    /* Loading spinner */
+    .spinner {
+        display: inline-block;
+        width: 16px;
+        height: 16px;
+        border: 2px solid rgba(255,255,255,0.3);
+        border-radius: 50%;
+        border-top-color: white;
+        animation: spin 0.8s linear infinite;
+        margin-left: 8px;
+    }
+    @keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+</style>
+</head>
+<body>
+
+<nav id="navbar"></nav>
+
+<div id="download" class="page active">
+  <div class="panel">
+    <h2>Download Section</h2>
+    <div class="search-container">
+        <select id="category-filter" onchange="applyFiltersAndSearch()">
+            <option value="">All Categories</option>
+        </select>
+        <input type="text" id="search-bar" onkeyup="applyFiltersAndSearch()" placeholder="Search by name or tag...">
+    </div>
+    <div id="downloadList"></div>
+  </div>
+</div>
+
+<div id="previewModal" class="modal" onclick="handleModalBackdropClick(event)">
+  <div class="modal-content" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <h2 id="previewTitle" class="modal-title">File Preview</h2>
+    </div>
+    <div class="modal-body">
+      <iframe id="pdf-viewer" src="" title="PDF Preview"></iframe>
+    </div>
+    <div class="modal-footer">
+      <p id="previewMsg"></p>
+      <div>
+        <button class="btn" onclick="closePreview()">Back to Search</button>
+        <button id="previewDownloadBtn" class="btn download-btn" onclick="performDownload()">Download (10 SM Coins)</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="loginModal" class="modal" onclick="handleLoginBackdropClick(event)">
+  <div class="login-container" onclick="event.stopPropagation()">
+    <div class="login-section">
+      <h2>Login Required</h2>
+      <input type="email" id="loginEmail" placeholder="Enter email">
+      <button class="btn" onclick="sendLoginOTP()">Send OTP</button>
+      <input type="text" id="loginOTP" placeholder="Enter OTP">
+      <button class="btn" onclick="verifyLoginOTP()">Verify & Continue</button>
+      <p id="loginMessage"></p>
+    </div>
+  </div>
+</div>
+
+<script>
+const API_URL = "http://localhost:3000";
+let allFiles = []; 
+let currentFileId = null;
+let currentFileName = null;
+let pendingAction = null;
+
+/* --- Page Setup and Rendering --- */
+function loadDownloads() {
+  const downloadList = document.getElementById("downloadList");
+  downloadList.innerHTML = "<p>Loading files...</p>";
+  fetch(`${API_URL}/get-downloads`)
+    .then(res => res.json())
+    .then(data => {
+      allFiles = data.files || [];
+      populateCategoryFilter(allFiles);
+      applyFiltersAndSearch();
+    })
+    .catch(() => { downloadList.innerHTML = "<p>Unable to load files.</p>"; });
+}
+
+function populateCategoryFilter(files) {
+    const filter = document.getElementById('category-filter');
+    const categories = new Set(files.map(file => file.category).filter(Boolean));
+    filter.innerHTML = '<option value="">All Categories</option>';
+    categories.forEach(category => {
+        const option = document.createElement('option');
+        option.value = category;
+        option.innerText = category;
+        filter.appendChild(option);
+    });
+}
+
+function applyFiltersAndSearch() {
+    const category = document.getElementById('category-filter').value.toLowerCase();
+    const searchTerm = document.getElementById('search-bar').value.toLowerCase();
+    let filteredFiles = allFiles;
+    if (category) {
+        filteredFiles = filteredFiles.filter(file => file.category && file.category.toLowerCase() === category);
+    }
+    if (searchTerm) {
+        filteredFiles = filteredFiles.filter(file => 
+            (file.name && file.name.toLowerCase().includes(searchTerm)) ||
+            (file.tags && Array.isArray(file.tags) && file.tags.some(tag => tag.toLowerCase().includes(searchTerm)))
+        );
+    }
+    renderDownloads(filteredFiles);
+}
+
+function renderDownloads(files) {
+    const downloadList = document.getElementById("downloadList");
+    downloadList.innerHTML = "";
+    if (files.length === 0) { downloadList.innerHTML = "<p>No matching files found.</p>"; return; }
+    files.forEach((file) => {
+        const item = document.createElement("div");
+        item.className = "download-item";
+        const tagsHtml = file.tags && Array.isArray(file.tags) ? `Tags: ${file.tags.join(', ')}` : '';
+        item.innerHTML = `
+          <div class="download-info">
+            <div class="file-name">${file.name}</div>
+            <div class="file-tags">${tagsHtml}</div>
+          </div>
+          <span style="font-size: 1.5rem;">&rarr;</span>`;
+        item.addEventListener('click', () => handleFileClick(file.id, file.name));
+        downloadList.appendChild(item);
+    });
+}
+
+/* --- Login and Preview Flow --- */
+function handleFileClick(fileId, fileName) {
+    if (localStorage.getItem("isLoggedIn") === "true") {
+        showPreview(fileId, fileName);
+    } else {
+        pendingAction = { action: 'preview', fileId, fileName };
+        showModal('loginModal');
+    }
+}
+
+function showPreview(fileId, fileName) {
+    currentFileId = fileId;
+    currentFileName = fileName;
+    const fileUrl = `${API_URL}/files/${fileId}`;
+    document.getElementById('pdf-viewer').src = fileUrl;
+    document.getElementById('previewTitle').innerText = fileName;
+    document.getElementById('previewMsg').innerText = "";
+    showModal('previewModal');
+}
+
+function closePreview() {
+    hideModal('previewModal');
+    setTimeout(() => {
+        document.getElementById('pdf-viewer').src = 'about:blank';
+    }, 300); 
+}
+
+function handleModalBackdropClick(event) {
+    if (event.target.id === 'previewModal') {
+        closePreview();
+    }
+}
+
+function handleLoginBackdropClick(event) {
+    if (event.target.id === 'loginModal') {
+        hideModal('loginModal');
+    }
+}
+
+function showModal(modalId) {
+    const modal = document.getElementById(modalId);
+    modal.style.display = 'flex';
+    setTimeout(() => modal.classList.add('show'), 10);
+}
+
+function hideModal(modalId) {
+    const modal = document.getElementById(modalId);
+    modal.classList.remove('show');
+    setTimeout(() => modal.style.display = 'none', 300);
+}
+
+function verifyLoginOTP() {
+    const email = document.getElementById("loginEmail").value;
+    const otp = document.getElementById("loginOTP").value;
+    if (!email || !otp) return;
+    fetch(`${API_URL}/verify-otp`, {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email, otp })
+    }).then(res => res.json()).then(data => {
+        if (data.userID) {
+            localStorage.setItem("userEmail", email);
+            localStorage.setItem("userID", data.userID);
+            localStorage.setItem("isLoggedIn", "true");
+            hideModal('loginModal');
+            updateNavbar();
+            if (pendingAction && pendingAction.action === 'preview') {
+                setTimeout(() => {
+                    showPreview(pendingAction.fileId, pendingAction.fileName);
+                    pendingAction = null;
+                }, 300); 
+            }
+        } else {
+            document.getElementById("loginMessage").innerText = "Invalid OTP";
+            document.getElementById("loginMessage").className = "message-error";
+        }
+    });
+}
+
+/* --- Download Logic --- */
+async function performDownload() {
+    const email = localStorage.getItem("userEmail");
+    const messageEl = document.getElementById("previewMsg");
+    const downloadBtn = document.getElementById("previewDownloadBtn");
+    
+    downloadBtn.disabled = true;
+    downloadBtn.innerHTML = 'Processing<span class="spinner"></span>';
+    setMessageStyle(messageEl, "Processing...", true);
+    
+    try {
+        const res = await fetch(`${API_URL}/download-file`, {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email, fileId: currentFileId })
+        });
+        if (!res.ok) { const err = await res.json(); throw new Error(err.message || "Failed"); }
+        const blob = await res.blob();
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = currentFileName;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.URL.revokeObjectURL(url);
+        setMessageStyle(messageEl, "Download successful!", true);
+        downloadBtn.innerHTML = 'Download (10 SM Coins)';
+        downloadBtn.disabled = false;
+    } catch (error) {
+        setMessageStyle(messageEl, error.message, false);
+        downloadBtn.innerHTML = 'Download (10 SM Coins)';
+        downloadBtn.disabled = false;
+    }
+}
+
+/* --- Initialization --- */
+function updateNavbar() {
+    const navbar = document.getElementById("navbar");
+    if (localStorage.getItem("isLoggedIn") === "true") {
+        navbar.innerHTML = `<a href="index.html">Dashboard</a><a href="#">Downloads</a><a href="#" onclick="logout()">Logout</a>`;
+    } else {
+        navbar.innerHTML = `<a href="index.html">Home / Login</a><a href="#">Downloads</a>`;
+    }
+}
+
+window.onload = () => { updateNavbar(); loadDownloads(); };
+
+function logout() { localStorage.clear(); window.location.reload(); }
+
+function sendLoginOTP() {
+    const email = document.getElementById("loginEmail").value;
+    if (!email) return;
+    fetch(`${API_URL}/send-otp`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email }) });
+}
+
+function setMessageStyle(el, msg, success) { 
+    if(el) { 
+        el.innerText = msg; 
+        el.className = success ? 'message-success' : 'message-error'; 
+    } 
+}
+</script>
+
+</body>
+</html>
