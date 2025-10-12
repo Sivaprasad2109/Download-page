@@ -396,28 +396,39 @@ async function performDownload() {
     
     try {
         const res = await fetch(`${API_URL}/download-file`, {
-            method: "POST", headers: { "Content-Type": "application/json" },
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ email, fileId: currentFileId })
         });
-        if (!res.ok) { const err = await res.json(); throw new Error(err.message || "Failed"); }
+
+        const contentType = res.headers.get("content-type");
+
+        if (contentType && contentType.includes("application/json")) {
+            // JSON returned → probably error like "Insufficient coins"
+            const data = await res.json();
+            throw new Error(data.message || "Download failed");
+        }
+
+        // Else, assume it's a file
         const blob = await res.blob();
         const url = window.URL.createObjectURL(blob);
         const link = document.createElement("a");
         link.href = url;
-        link.download = currentFileName;
+        link.download = currentFileName || "file.pdf";
         document.body.appendChild(link);
         link.click();
         link.remove();
         window.URL.revokeObjectURL(url);
-        setMessageStyle(messageEl, "Download successful!", true);
-        downloadBtn.innerHTML = 'Download (10 SM Coins)';
-        downloadBtn.disabled = false;
+
+        setMessageStyle(messageEl, "✅ File downloaded successfully! Coins deducted.", true);
     } catch (error) {
-        setMessageStyle(messageEl, error.message, false);
+        setMessageStyle(messageEl, "❌ " + error.message, false);
+    } finally {
         downloadBtn.innerHTML = 'Download (10 SM Coins)';
         downloadBtn.disabled = false;
     }
 }
+
 
 /* --- Initialization --- */
 function updateNavbar() {
@@ -449,3 +460,4 @@ function setMessageStyle(el, msg, success) {
 
 </body>
 </html>
+
