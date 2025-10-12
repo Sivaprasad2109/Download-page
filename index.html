@@ -385,49 +385,38 @@ function verifyLoginOTP() {
 }
 
 /* --- Download Logic --- */
-async function performDownload() {
+function performDownload() {
     const email = localStorage.getItem("userEmail");
     const messageEl = document.getElementById("previewMsg");
     const downloadBtn = document.getElementById("previewDownloadBtn");
-    
+
+    if (!email || !currentFileId) {
+        setMessageStyle(messageEl, "❌ Missing email or file.", false);
+        return;
+    }
+
+    // Disable button and show spinner
     downloadBtn.disabled = true;
     downloadBtn.innerHTML = 'Processing<span class="spinner"></span>';
     setMessageStyle(messageEl, "Processing...", true);
-    
-    try {
-        const res = await fetch(`${API_URL}/download-file`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ email, fileId: currentFileId })
-        });
 
-        const contentType = res.headers.get("content-type");
+    // Construct download URL
+    const downloadUrl = `${API_URL}/download-file?email=${encodeURIComponent(email)}&fileId=${encodeURIComponent(currentFileId)}`;
 
-        if (contentType && contentType.includes("application/json")) {
-            // JSON returned → probably error like "Insufficient coins"
-            const data = await res.json();
-            throw new Error(data.message || "Download failed");
-        }
+    // Small delay to show spinner before redirect
+    setTimeout(() => {
+        // Redirect triggers browser download automatically
+        window.location.href = downloadUrl;
 
-        // Else, assume it's a file
-        const blob = await res.blob();
-        const url = window.URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = currentFileName || "file.pdf";
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
-        window.URL.revokeObjectURL(url);
-
-        setMessageStyle(messageEl, "✅ File downloaded successfully! Coins deducted.", true);
-    } catch (error) {
-        setMessageStyle(messageEl, "❌ " + error.message, false);
-    } finally {
-        downloadBtn.innerHTML = 'Download (10 SM Coins)';
-        downloadBtn.disabled = false;
-    }
+        // Reset button after a short delay
+        setTimeout(() => {
+            downloadBtn.innerHTML = 'Download (10 SM Coins)';
+            downloadBtn.disabled = false;
+            setMessageStyle(messageEl, "✅ Download initiated! Coins deducted.", true);
+        }, 2000);
+    }, 300);
 }
+
 
 
 /* --- Initialization --- */
@@ -460,5 +449,6 @@ function setMessageStyle(el, msg, success) {
 
 </body>
 </html>
+
 
 
