@@ -405,15 +405,21 @@ function performDownload() {
 
     // Small delay to show spinner before redirect
     setTimeout(() => {
-        // Redirect triggers browser download automatically
-        window.location.href = downloadUrl;
+        // 💥 WIX IFRAME FIX: Use window.open with '_top' to force the download
+        // to initiate in the main browser window, bypassing the iframe security block.
+        window.open(downloadUrl, '_top'); 
 
-        // Reset button after a short delay
+        // Since the server handles the coin deduction via the download-file route, 
+        // we assume success and update the UI after a short delay.
         setTimeout(() => {
             downloadBtn.innerHTML = 'Download (10 SM Coins)';
             downloadBtn.disabled = false;
             setMessageStyle(messageEl, "✅ Download initiated! Coins deducted.", true);
-        }, 2000);
+            
+            // It is highly recommended to close the preview modal here to reset the state:
+            // closePreview();
+            
+        }, 1500); 
     }, 300);
 }
 
@@ -449,6 +455,5 @@ function setMessageStyle(el, msg, success) {
 
 </body>
 </html>
-
 
 
