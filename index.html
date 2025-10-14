@@ -385,44 +385,33 @@ function verifyLoginOTP() {
 }
 
 /* --- Download Logic --- */
-function performDownload() {
-    const email = localStorage.getItem("userEmail");
-    const messageEl = document.getElementById("previewMsg");
-    const downloadBtn = document.getElementById("previewDownloadBtn");
+async function performDownload() {
+  const email = localStorage.getItem("userEmail");
+  if (!email || !currentFileId) {
+    alert("❌ Missing email or file.");
+    return;
+  }
 
-    if (!email || !currentFileId) {
-        setMessageStyle(messageEl, "❌ Missing email or file.", false);
-        return;
-    }
+  const downloadBtn = document.getElementById("previewDownloadBtn");
+  const messageEl = document.getElementById("previewMsg");
 
-    // Disable button and show spinner
-    downloadBtn.disabled = true;
-    downloadBtn.innerHTML = 'Processing<span class="spinner"></span>';
-    setMessageStyle(messageEl, "Processing...", true);
+  downloadBtn.disabled = true;
+  messageEl.innerText = "Processing...";
+  downloadBtn.innerHTML = 'Processing...';
 
-    // Construct download URL
-    const downloadUrl = `${API_URL}/download-file?email=${encodeURIComponent(email)}&fileId=${encodeURIComponent(currentFileId)}`;
+  try {
+    // ✅ Trigger direct file download
+    window.open(`${API_URL}/download-file?email=${encodeURIComponent(email)}&fileId=${encodeURIComponent(currentFileId)}`, "_blank");
 
-    // Small delay to show spinner before redirect
-    setTimeout(() => {
-        // 💥 WIX IFRAME FIX: Use window.open with '_top' to force the download
-        // to initiate in the main browser window, bypassing the iframe security block.
-        window.open(downloadUrl, '_top'); 
-
-        // Since the server handles the coin deduction via the download-file route, 
-        // we assume success and update the UI after a short delay.
-        setTimeout(() => {
-            downloadBtn.innerHTML = 'Download (10 SM Coins)';
-            downloadBtn.disabled = false;
-            setMessageStyle(messageEl, "✅ Download initiated! Coins deducted.", true);
-            
-            // It is highly recommended to close the preview modal here to reset the state:
-            // closePreview();
-            
-        }, 1500); 
-    }, 300);
+    
+    messageEl.innerText = "✅ Download started! Coins deducted.";
+  } catch (err) {
+    messageEl.innerText = "❌ " + err.message;
+  } finally {
+    downloadBtn.disabled = false;
+    downloadBtn.innerHTML = 'Download (10 SM Coins)';
+  }
 }
-
 
 
 /* --- Initialization --- */
