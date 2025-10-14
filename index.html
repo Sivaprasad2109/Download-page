@@ -385,33 +385,31 @@ function verifyLoginOTP() {
 }
 
 /* --- Download Logic --- */
-async function performDownload() {
-  const email = localStorage.getItem("userEmail");
-  if (!email || !currentFileId) {
-    alert("❌ Missing email or file.");
+async function downloadFile(fileId, email, fileName) {
+  const res = await fetch("http://localhost:3000/download-file", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ fileId, email })
+  });
+
+  if (!res.ok) {
+    const error = await res.json();
+    alert(error.message);
     return;
   }
 
-  const downloadBtn = document.getElementById("previewDownloadBtn");
-  const messageEl = document.getElementById("previewMsg");
+  const blob = await res.blob();
+  const url = window.URL.createObjectURL(blob);
 
-  downloadBtn.disabled = true;
-  messageEl.innerText = "Processing...";
-  downloadBtn.innerHTML = 'Processing...';
-
-  try {
-    // ✅ Trigger direct file download
-    window.open(`${API_URL}/download-file?email=${encodeURIComponent(email)}&fileId=${encodeURIComponent(currentFileId)}`, "_blank");
-
-    
-    messageEl.innerText = "✅ Download started! Coins deducted.";
-  } catch (err) {
-    messageEl.innerText = "❌ " + err.message;
-  } finally {
-    downloadBtn.disabled = false;
-    downloadBtn.innerHTML = 'Download (10 SM Coins)';
-  }
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = fileName || "download.pdf";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  window.URL.revokeObjectURL(url);
 }
+
 
 
 /* --- Initialization --- */
@@ -444,5 +442,6 @@ function setMessageStyle(el, msg, success) {
 
 </body>
 </html>
+
 
 
