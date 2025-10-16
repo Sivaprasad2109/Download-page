@@ -386,53 +386,41 @@ function verifyLoginOTP() {
 
 /* --- Download Logic --- */
 async function downloadFile(fileId, email, fileName) {
-  try {
-    const res = await fetch("http://localhost:3000/download-file", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ fileId, email })
-    });
+    try {
+        const url = `${API_URL}/download-file?fileId=${encodeURIComponent(fileId)}&email=${encodeURIComponent(email)}`;
+        const res = await fetch(url);
+        
+        if (!res.ok) {
+            let errorMessage = "Failed to download file";
+            try { const data = await res.text(); errorMessage = data || errorMessage; } catch {}
+            alert(errorMessage);
+            return;
+        }
 
-    if (!res.ok) {
-      // Attempt to parse JSON error, fallback to text
-      let errorMessage = "Failed to download file";
-      try {
-        const errorData = await res.json();
-        errorMessage = errorData.message || errorMessage;
-      } catch {
-        const text = await res.text();
-        errorMessage = text || errorMessage;
-      }
-      alert(errorMessage);
-      return;
+        if (!fileName) {
+            const disposition = res.headers.get("Content-Disposition");
+            if (disposition && disposition.includes("filename=")) {
+                fileName = disposition.split("filename=")[1].replace(/"/g, "");
+            } else {
+                fileName = "download.pdf";
+            }
+        }
+
+        const blob = await res.blob();
+        const downloadUrl = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = downloadUrl;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(downloadUrl);
+    } catch (err) {
+        console.error(err);
+        alert("Unexpected error occurred while downloading file.");
     }
-
-    // Get the filename from headers if not provided
-    if (!fileName) {
-      const disposition = res.headers.get("Content-Disposition");
-      if (disposition && disposition.includes("filename=")) {
-        fileName = disposition.split("filename=")[1].replace(/"/g, "");
-      } else {
-        fileName = "download.pdf";
-      }
-    }
-
-    // Convert response to blob and trigger download
-    const blob = await res.blob();
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = fileName;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    window.URL.revokeObjectURL(url);
-
-  } catch (err) {
-    console.error("Download error:", err);
-    alert("Unexpected error occurred while downloading file.");
-  }
 }
+
 
 
 
@@ -467,6 +455,7 @@ function setMessageStyle(el, msg, success) {
 
 </body>
 </html>
+
 
 
 
