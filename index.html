@@ -421,6 +421,23 @@ async function downloadFile(fileId, email, fileName) {
     }
 }
 
+async function performDownload() {
+    const email = localStorage.getItem("userEmail");
+    const messageEl = document.getElementById('previewMsg');
+    
+    if (!email || !currentFileId) {
+        setMessageStyle(messageEl, "Login required or file not selected. Try re-logging.", false);
+        return;
+    }
+
+    messageEl.innerHTML = 'Downloading and deducting coins... <span class="spinner"></span>';
+    
+    await downloadFile(currentFileId, email, currentFileName);
+    
+    setMessageStyle(messageEl, `Download process initiated for ${currentFileName}.`, true);
+    
+    setTimeout(closePreview, 1500); 
+}
 
 
 
@@ -455,6 +472,7 @@ function setMessageStyle(el, msg, success) {
 
 </body>
 </html>
+
 
 
 
