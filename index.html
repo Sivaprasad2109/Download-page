@@ -294,8 +294,9 @@ function hideModal(modalId) {
 }
 
 // MODIFIED: New function to handle User ID verification and download
-function verifyUserIDAndStartDownload() {
-    const userID = document.getElementById("userIDConfirm").value;
+// MODIFIED JavaScript for Server-Side Verification
+async function verifyUserIDAndStartDownload() {
+    const userID = document.getElementById("userIDConfirm").value.trim();
     const messageEl = document.getElementById("verificationMessage");
     
     if (!userID) {
@@ -303,34 +304,48 @@ function verifyUserIDAndStartDownload() {
         return;
     }
     
-    const fileId = currentFileId;
-    const fileName = currentFileName;
+    messageEl.innerHTML = 'Verifying User ID... <span class="spinner"></span>';
 
-    if (!fileId) {
-        setMessageStyle(messageEl, "Error: No file selected.", false);
-        return;
+    try {
+        // STEP 1: Connect to the server to verify the User ID
+        const verificationResponse = await fetch(`${API_URL}/api/user/verify`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            // Send the user ID to the server
+            body: JSON.stringify({ userId: userID }) 
+        });
+
+        if (!verificationResponse.ok) {
+            // Handle server-side errors, e.g., "User ID not found" or "Insufficient Coins"
+            const errorData = await verificationResponse.json();
+            throw new Error(errorData.message || "Verification failed. Please check your User ID.");
+        }
+        
+        // Assume successful verification if response.ok is true
+        // The server confirms the User ID is valid and authorized for download.
+        
+        messageEl.innerHTML = 'Verification successful! Initiating download... <span class="spinner"></span>';
+        
+        // STEP 2: Initiate Download using the verified User ID
+        const fileId = currentFileId;
+        const fileName = currentFileName;
+        
+        // Use the verified userID in the download request
+        const fileUrl = `${API_URL}/download-file?fileId=${encodeURIComponent(fileId)}&auth_id=${encodeURIComponent(userID)}`;
+        
+        window.open(fileUrl, "_blank"); 
+
+        setMessageStyle(messageEl, `Download process initiated for ${fileName}.`, true);
+        
+        setTimeout(() => {
+            document.getElementById("userIDConfirm").value = '';
+            hideModal('verificationModal');
+        }, 1500);
+
+    } catch (error) {
+        console.error('Download error:', error.message);
+        setMessageStyle(messageEl, `Error: ${error.message}`, false);
     }
-    
-    // NOTE: This client-side code assumes the User ID is correct and proceeds.
-    // In a real scenario, this would involve a fetch() to a backend
-    // endpoint to verify the User ID against the system/file access.
-    
-    messageEl.innerHTML = 'Verification successful! Initiating download... <span class="spinner"></span>';
-    
-    // The original API used 'email'. We change the parameter to 'auth_id' 
-    // to use the entered User ID, assuming the backend can handle this.
-    const fileUrl = `${API_URL}/download-file?fileId=${encodeURIComponent(fileId)}&auth_id=${encodeURIComponent(userID)}`;
-    
-    // Open file in a new tab to trigger download and close the modal
-    window.open(fileUrl, "_blank"); 
-
-    setMessageStyle(messageEl, `Download process initiated for ${fileName}.`, true);
-    
-    // Close modal after a short delay
-    setTimeout(() => {
-        document.getElementById("userIDConfirm").value = '';
-        hideModal('verificationModal');
-    }, 1500);
 }
 
 
@@ -348,3 +363,4 @@ function setMessageStyle(el, msg, success) {
 
 </body>
 </html>
+
