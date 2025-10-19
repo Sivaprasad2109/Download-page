@@ -385,11 +385,12 @@ function verifyLoginOTP() {
 }
 
 /* --- Download Logic --- */
+/* --- Download Logic (Sandbox-Compatible) --- */
 async function downloadFile(fileId, email, fileName) {
     try {
         const url = `${API_URL}/download-file?fileId=${encodeURIComponent(fileId)}&email=${encodeURIComponent(email)}`;
         const res = await fetch(url);
-        
+
         if (!res.ok) {
             let errorMessage = "Failed to download file";
             try { const data = await res.text(); errorMessage = data || errorMessage; } catch {}
@@ -408,13 +409,23 @@ async function downloadFile(fileId, email, fileName) {
 
         const blob = await res.blob();
         const downloadUrl = window.URL.createObjectURL(blob);
-        const a = document.createElement("a");
+
+        // ✅ Sandbox-compatible download
+        const iframe = document.createElement("iframe");
+        iframe.style.display = "none";
+        iframe.sandbox = "allow-same-origin allow-downloads";
+        document.body.appendChild(iframe);
+        const iframeDoc = iframe.contentWindow.document;
+        const a = iframeDoc.createElement("a");
         a.href = downloadUrl;
         a.download = fileName;
-        document.body.appendChild(a);
+        iframeDoc.body.appendChild(a);
         a.click();
-        a.remove();
+
+        // Cleanup
+        document.body.removeChild(iframe);
         window.URL.revokeObjectURL(downloadUrl);
+
     } catch (err) {
         console.error(err);
         alert("Unexpected error occurred while downloading file.");
@@ -424,19 +435,19 @@ async function downloadFile(fileId, email, fileName) {
 async function performDownload() {
     const email = localStorage.getItem("userEmail");
     const messageEl = document.getElementById('previewMsg');
-    
+
     if (!email || !currentFileId) {
         setMessageStyle(messageEl, "Login required or file not selected. Try re-logging.", false);
         return;
     }
 
     messageEl.innerHTML = 'Downloading and deducting coins... <span class="spinner"></span>';
-    
+
     await downloadFile(currentFileId, email, currentFileName);
-    
+
     setMessageStyle(messageEl, `Download process initiated for ${currentFileName}.`, true);
-    
-    setTimeout(closePreview, 1500); 
+
+    setTimeout(closePreview, 1500);
 }
 
 
@@ -472,6 +483,7 @@ function setMessageStyle(el, msg, success) {
 
 </body>
 </html>
+
 
 
 
