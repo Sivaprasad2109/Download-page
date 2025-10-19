@@ -441,11 +441,13 @@ async function performDownload() {
         return;
     }
 
-    messageEl.innerHTML = 'Downloading and deducting coins... <span class="spinner"></span>';
+    messageEl.innerHTML = 'Preparing your download... <span class="spinner"></span>';
 
-    await downloadFile(currentFileId, email, currentFileName);
+    // Open file in a new tab instead of programmatic download
+    const fileUrl = `${API_URL}/download-file?fileId=${encodeURIComponent(currentFileId)}&email=${encodeURIComponent(email)}`;
+    window.open(fileUrl, "_blank"); // <-- This works inside Wix iframe
 
-    setMessageStyle(messageEl, `Download process initiated for ${currentFileName}.`, true);
+    setMessageStyle(messageEl, `File opened in a new tab for ${currentFileName}.`, true);
 
     setTimeout(closePreview, 1500);
 }
@@ -483,6 +485,7 @@ function setMessageStyle(el, msg, success) {
 
 </body>
 </html>
+
 
 
 
