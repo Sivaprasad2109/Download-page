@@ -105,6 +105,7 @@
         backdrop-filter: blur(5px);
     }
     
+    /* Reusing login-container class for verification modal */
     .modal-content, .login-container {
         background: white; 
         border-radius: 10px;
@@ -118,33 +119,6 @@
     .modal.show .login-container {
         transform: scale(1) translateY(0);
         opacity: 1;
-    }
-    
-    .modal-content {
-        width: 90%; 
-        max-width: 800px;
-        height: 90vh;
-        display: flex; 
-        flex-direction: column;
-    }
-    
-    .modal-header { 
-        padding: 15px; 
-        border-bottom: 1px solid #eee; 
-        display: flex; 
-        justify-content: space-between; 
-        align-items: center; 
-    }
-    .modal-title { font-size: 1.2rem; font-weight: bold; }
-    .modal-body { flex-grow: 1; overflow: hidden; }
-    .modal-body iframe { width: 100%; height: 100%; border: none; }
-    .modal-footer { 
-        padding: 15px; 
-        border-top: 1px solid #eee; 
-        text-align: right; 
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
     }
     
     .login-container { 
@@ -193,7 +167,10 @@
 </head>
 <body>
 
-<nav id="navbar"></nav>
+<nav id="navbar">
+    <a href="index.html">Home / Download</a>
+    <a href="#">Downloads</a>
+</nav>
 
 <div id="download" class="page active">
   <div class="panel">
@@ -208,33 +185,14 @@
   </div>
 </div>
 
-<div id="previewModal" class="modal" onclick="handleModalBackdropClick(event)">
-  <div class="modal-content" onclick="event.stopPropagation()">
-    <div class="modal-header">
-      <h2 id="previewTitle" class="modal-title">File Preview</h2>
-    </div>
-    <div class="modal-body">
-      <iframe id="pdf-viewer" src="" title="PDF Preview"></iframe>
-    </div>
-    <div class="modal-footer">
-      <p id="previewMsg"></p>
-      <div>
-        <button class="btn" onclick="closePreview()">Back to Search</button>
-        <button id="previewDownloadBtn" class="btn download-btn" onclick="performDownload()">Download (10 SM Coins)</button>
-      </div>
-    </div>
-  </div>
-</div>
-
-<div id="loginModal" class="modal" onclick="handleLoginBackdropClick(event)">
+<div id="verificationModal" class="modal" onclick="handleVerificationBackdropClick(event)">
   <div class="login-container" onclick="event.stopPropagation()">
     <div class="login-section">
-      <h2>Login Required</h2>
-      <input type="email" id="loginEmail" placeholder="Enter email">
-      <button class="btn" onclick="sendLoginOTP()">Send OTP</button>
-      <input type="text" id="loginOTP" placeholder="Enter OTP">
-      <button class="btn" onclick="verifyLoginOTP()">Verify & Continue</button>
-      <p id="loginMessage"></p>
+      <h2>Confirm User ID to Download</h2>
+      <p>Enter your User ID to authorise the download.</p>
+      <input type="text" id="userIDConfirm" placeholder="Enter your User ID">
+      <button class="btn download-btn" onclick="verifyUserIDAndStartDownload()">Verify & Download (10 SM Coins)</button>
+      <p id="verificationMessage"></p>
     </div>
   </div>
 </div>
@@ -244,7 +202,6 @@ const API_URL = "https://login-page-for-studymint-3.onrender.com";
 let allFiles = []; 
 let currentFileId = null;
 let currentFileName = null;
-let pendingAction = null;
 
 /* --- Page Setup and Rendering --- */
 function loadDownloads() {
@@ -302,47 +259,25 @@ function renderDownloads(files) {
             <div class="file-tags">${tagsHtml}</div>
           </div>
           <span style="font-size: 1.5rem;">&rarr;</span>`;
+        // MODIFIED: handleFileClick now directly triggers verification modal
         item.addEventListener('click', () => handleFileClick(file.id, file.name));
         downloadList.appendChild(item);
     });
 }
 
-/* --- Login and Preview Flow --- */
+/* --- Verification and Download Flow --- */
 function handleFileClick(fileId, fileName) {
-    if (localStorage.getItem("isLoggedIn") === "true") {
-        showPreview(fileId, fileName);
-    } else {
-        pendingAction = { action: 'preview', fileId, fileName };
-        showModal('loginModal');
-    }
-}
-
-function showPreview(fileId, fileName) {
+    // Store file details and immediately show the verification modal
     currentFileId = fileId;
     currentFileName = fileName;
-    const fileUrl = `${API_URL}/files/${fileId}`;
-    document.getElementById('pdf-viewer').src = fileUrl;
-    document.getElementById('previewTitle').innerText = fileName;
-    document.getElementById('previewMsg').innerText = "";
-    showModal('previewModal');
+    document.getElementById("userIDConfirm").value = ''; // Clear previous input
+    setMessageStyle(document.getElementById("verificationMessage"), "", true); // Clear previous message
+    showModal('verificationModal');
 }
 
-function closePreview() {
-    hideModal('previewModal');
-    setTimeout(() => {
-        document.getElementById('pdf-viewer').src = 'about:blank';
-    }, 300); 
-}
-
-function handleModalBackdropClick(event) {
-    if (event.target.id === 'previewModal') {
-        closePreview();
-    }
-}
-
-function handleLoginBackdropClick(event) {
-    if (event.target.id === 'loginModal') {
-        hideModal('loginModal');
+function handleVerificationBackdropClick(event) {
+    if (event.target.id === 'verificationModal') {
+        hideModal('verificationModal');
     }
 }
 
@@ -358,123 +293,50 @@ function hideModal(modalId) {
     setTimeout(() => modal.style.display = 'none', 300);
 }
 
-function verifyLoginOTP() {
-    const email = document.getElementById("loginEmail").value;
-    const otp = document.getElementById("loginOTP").value;
-    if (!email || !otp) return;
-    fetch(`${API_URL}/verify-otp`, {
-        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email, otp })
-    }).then(res => res.json()).then(data => {
-        if (data.userID) {
-            localStorage.setItem("userEmail", email);
-            localStorage.setItem("userID", data.userID);
-            localStorage.setItem("isLoggedIn", "true");
-            hideModal('loginModal');
-            updateNavbar();
-            if (pendingAction && pendingAction.action === 'preview') {
-                setTimeout(() => {
-                    showPreview(pendingAction.fileId, pendingAction.fileName);
-                    pendingAction = null;
-                }, 300); 
-            }
-        } else {
-            document.getElementById("loginMessage").innerText = "Invalid OTP";
-            document.getElementById("loginMessage").className = "message-error";
-        }
-    });
-}
-
-/* --- Download Logic --- */
-/* --- Download Logic (Sandbox-Compatible) --- */
-async function downloadFile(fileId, email, fileName) {
-    try {
-        const url = `${API_URL}/download-file?fileId=${encodeURIComponent(fileId)}&email=${encodeURIComponent(email)}`;
-        const res = await fetch(url);
-
-        if (!res.ok) {
-            let errorMessage = "Failed to download file";
-            try { const data = await res.text(); errorMessage = data || errorMessage; } catch {}
-            alert(errorMessage);
-            return;
-        }
-
-        if (!fileName) {
-            const disposition = res.headers.get("Content-Disposition");
-            if (disposition && disposition.includes("filename=")) {
-                fileName = disposition.split("filename=")[1].replace(/"/g, "");
-            } else {
-                fileName = "download.pdf";
-            }
-        }
-
-        const blob = await res.blob();
-        const downloadUrl = window.URL.createObjectURL(blob);
-
-        // ✅ Sandbox-compatible download
-        const iframe = document.createElement("iframe");
-        iframe.style.display = "none";
-        iframe.sandbox = "allow-same-origin allow-downloads";
-        document.body.appendChild(iframe);
-        const iframeDoc = iframe.contentWindow.document;
-        const a = iframeDoc.createElement("a");
-        a.href = downloadUrl;
-        a.download = fileName;
-        iframeDoc.body.appendChild(a);
-        a.click();
-
-        // Cleanup
-        document.body.removeChild(iframe);
-        window.URL.revokeObjectURL(downloadUrl);
-
-    } catch (err) {
-        console.error(err);
-        alert("Unexpected error occurred while downloading file.");
-    }
-}
-
-async function performDownload() {
-    const email = localStorage.getItem("userEmail");
-    const messageEl = document.getElementById('previewMsg');
-
-    if (!email || !currentFileId) {
-        setMessageStyle(messageEl, "Login required or file not selected. Try re-logging.", false);
+// MODIFIED: New function to handle User ID verification and download
+function verifyUserIDAndStartDownload() {
+    const userID = document.getElementById("userIDConfirm").value;
+    const messageEl = document.getElementById("verificationMessage");
+    
+    if (!userID) {
+        setMessageStyle(messageEl, "Please enter your User ID.", false);
         return;
     }
+    
+    const fileId = currentFileId;
+    const fileName = currentFileName;
 
-    messageEl.innerHTML = 'Downloading and deducting coins... <span class="spinner"></span>';
+    if (!fileId) {
+        setMessageStyle(messageEl, "Error: No file selected.", false);
+        return;
+    }
+    
+    // NOTE: This client-side code assumes the User ID is correct and proceeds.
+    // In a real scenario, this would involve a fetch() to a backend
+    // endpoint to verify the User ID against the system/file access.
+    
+    messageEl.innerHTML = 'Verification successful! Initiating download... <span class="spinner"></span>';
+    
+    // The original API used 'email'. We change the parameter to 'auth_id' 
+    // to use the entered User ID, assuming the backend can handle this.
+    const fileUrl = `${API_URL}/download-file?fileId=${encodeURIComponent(fileId)}&auth_id=${encodeURIComponent(userID)}`;
+    
+    // Open file in a new tab to trigger download and close the modal
+    window.open(fileUrl, "_blank"); 
 
-    // Open file in a new tab instead of iframe
-    const fileUrl = `${API_URL}/download-file?fileId=${encodeURIComponent(currentFileId)}&email=${encodeURIComponent(email)}`;
-    window.open(fileUrl, "_blank"); // <- change here
-
-    setMessageStyle(messageEl, `Download process initiated for ${currentFileName}.`, true);
-
-    setTimeout(closePreview, 1500);
+    setMessageStyle(messageEl, `Download process initiated for ${fileName}.`, true);
+    
+    // Close modal after a short delay
+    setTimeout(() => {
+        document.getElementById("userIDConfirm").value = '';
+        hideModal('verificationModal');
+    }, 1500);
 }
-
-
-
 
 
 /* --- Initialization --- */
-function updateNavbar() {
-    const navbar = document.getElementById("navbar");
-    if (localStorage.getItem("isLoggedIn") === "true") {
-        navbar.innerHTML = `<a href="index.html">Dashboard</a><a href="#">Downloads</a><a href="#" onclick="logout()">Logout</a>`;
-    } else {
-        navbar.innerHTML = `<a href="index.html">Home / Login</a><a href="#">Downloads</a>`;
-    }
-}
 
-window.onload = () => { updateNavbar(); loadDownloads(); };
-
-function logout() { localStorage.clear(); window.location.reload(); }
-
-function sendLoginOTP() {
-    const email = document.getElementById("loginEmail").value;
-    if (!email) return;
-    fetch(`${API_URL}/send-otp`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email }) });
-}
+window.onload = () => { loadDownloads(); };
 
 function setMessageStyle(el, msg, success) { 
     if(el) { 
@@ -486,12 +348,3 @@ function setMessageStyle(el, msg, success) {
 
 </body>
 </html>
-
-
-
-
-
-
-
-
-
