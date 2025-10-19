@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <title>Downloads - StudyMint Portal</title>
 <style>
+    /* Styles are unchanged and omitted for brevity */
     * { box-sizing: border-box; }
     body { margin: 0; font-family: Arial, sans-serif; background-color: #f0f4ff; color: #002b5c; }
     nav { background-color: #002b5c; padding: 10px 20px; display: flex; justify-content: space-around; box-shadow: 0 4px 15px rgba(0, 43, 92, 0.3); }
@@ -105,7 +106,6 @@
         backdrop-filter: blur(5px);
     }
     
-    /* Reusing login-container class for verification modal */
     .modal-content, .login-container {
         background: white; 
         border-radius: 10px;
@@ -119,6 +119,33 @@
     .modal.show .login-container {
         transform: scale(1) translateY(0);
         opacity: 1;
+    }
+    
+    .modal-content {
+        width: 90%; 
+        max-width: 800px;
+        height: 90vh;
+        display: flex; 
+        flex-direction: column;
+    }
+    
+    .modal-header { 
+        padding: 15px; 
+        border-bottom: 1px solid #eee; 
+        display: flex; 
+        justify-content: space-between; 
+        align-items: center; 
+    }
+    .modal-title { font-size: 1.2rem; font-weight: bold; }
+    .modal-body { flex-grow: 1; overflow: hidden; }
+    .modal-body iframe { width: 100%; height: 100%; border: none; }
+    .modal-footer { 
+        padding: 15px; 
+        border-top: 1px solid #eee; 
+        text-align: right; 
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
     }
     
     .login-container { 
@@ -154,9 +181,9 @@
         display: inline-block;
         width: 16px;
         height: 16px;
-        border: 2px solid rgba(255,255,255,0.3);
+        border: 2px solid rgba(0,43,92,0.3);
         border-radius: 50%;
-        border-top-color: white;
+        border-top-color: #004c99;
         animation: spin 0.8s linear infinite;
         margin-left: 8px;
     }
@@ -168,7 +195,7 @@
 <body>
 
 <nav id="navbar">
-    <a href="index.html">Home / Download</a>
+    <a href="index.html">Home / Login</a>
     <a href="#">Downloads</a>
 </nav>
 
@@ -185,14 +212,30 @@
   </div>
 </div>
 
-<div id="verificationModal" class="modal" onclick="handleVerificationBackdropClick(event)">
+<div id="previewModal" class="modal" onclick="handleModalBackdropClick(event)">
+  <div class="modal-content" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <h2 id="previewTitle" class="modal-title">File Preview</h2>
+    </div>
+    <div class="modal-body">
+      <iframe id="pdf-viewer" src="" title="PDF Preview"></iframe>
+    </div>
+    <div class="modal-footer">
+      <p id="previewMsg"></p>
+      <div>
+        <button class="btn" onclick="closePreview()">Back to Search</button>
+        <button id="previewDownloadBtn" class="btn download-btn" onclick="performDownload()">Download (10 SM Coins)</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="loginModal" class="modal" onclick="handleLoginBackdropClick(event)">
   <div class="login-container" onclick="event.stopPropagation()">
     <div class="login-section">
-      <h2>Confirm User ID to Download</h2>
-      <p>Enter your User ID to authorise the download.</p>
-      <input type="text" id="userIDConfirm" placeholder="Enter your User ID">
-      <button class="btn download-btn" onclick="verifyUserIDAndStartDownload()">Verify & Download (10 SM Coins)</button>
-      <p id="verificationMessage"></p>
+      <h2>Login Required</h2>
+      <p>Please log in via the main portal to access file previews and downloads.</p>
+      <button class="btn" onclick="window.location.href='index.html'">Go to Login Page</button>
     </div>
   </div>
 </div>
@@ -207,6 +250,8 @@ let currentFileName = null;
 function loadDownloads() {
   const downloadList = document.getElementById("downloadList");
   downloadList.innerHTML = "<p>Loading files...</p>";
+  
+  // Uses the /get-downloads endpoint from server.js
   fetch(`${API_URL}/get-downloads`)
     .then(res => res.json())
     .then(data => {
@@ -259,25 +304,51 @@ function renderDownloads(files) {
             <div class="file-tags">${tagsHtml}</div>
           </div>
           <span style="font-size: 1.5rem;">&rarr;</span>`;
-        // MODIFIED: handleFileClick now directly triggers verification modal
         item.addEventListener('click', () => handleFileClick(file.id, file.name));
         downloadList.appendChild(item);
     });
 }
 
-/* --- Verification and Download Flow --- */
+/* --- Login and Preview Flow --- */
 function handleFileClick(fileId, fileName) {
-    // Store file details and immediately show the verification modal
-    currentFileId = fileId;
-    currentFileName = fileName;
-    document.getElementById("userIDConfirm").value = ''; // Clear previous input
-    setMessageStyle(document.getElementById("verificationMessage"), "", true); // Clear previous message
-    showModal('verificationModal');
+    // Check if the user is logged in (via the main portal)
+    if (localStorage.getItem("isLoggedIn") === "true" && localStorage.getItem("userEmail")) {
+        showPreview(fileId, fileName);
+    } else {
+        // Show the login reminder modal
+        showModal('loginModal');
+    }
 }
 
-function handleVerificationBackdropClick(event) {
-    if (event.target.id === 'verificationModal') {
-        hideModal('verificationModal');
+function showPreview(fileId, fileName) {
+    currentFileId = fileId;
+    currentFileName = fileName;
+    
+    // Uses the secure /files/:fileId preview endpoint from server.js
+    const fileUrl = `${API_URL}/files/${fileId}`;
+    
+    document.getElementById('pdf-viewer').src = fileUrl;
+    document.getElementById('previewTitle').innerText = fileName;
+    document.getElementById('previewMsg').innerText = "";
+    showModal('previewModal');
+}
+
+function closePreview() {
+    hideModal('previewModal');
+    setTimeout(() => {
+        document.getElementById('pdf-viewer').src = 'about:blank';
+    }, 300); 
+}
+
+function handleModalBackdropClick(event) {
+    if (event.target.id === 'previewModal') {
+        closePreview();
+    }
+}
+
+function handleLoginBackdropClick(event) {
+    if (event.target.id === 'loginModal') {
+        hideModal('loginModal');
     }
 }
 
@@ -293,64 +364,33 @@ function hideModal(modalId) {
     setTimeout(() => modal.style.display = 'none', 300);
 }
 
-// MODIFIED: New function to handle User ID verification and download
-// MODIFIED JavaScript for Server-Side Verification
-async function verifyUserIDAndStartDownload() {
-    const userID = document.getElementById("userIDConfirm").value.trim();
-    const messageEl = document.getElementById("verificationMessage");
-    
-    if (!userID) {
-        setMessageStyle(messageEl, "Please enter your User ID.", false);
+/* --- Download Logic (Securely connects to server.js) --- */
+async function performDownload() {
+    // Get the user's email which is required by the server for coin deduction
+    const email = localStorage.getItem("userEmail");
+    const messageEl = document.getElementById('previewMsg');
+
+    if (!email || !currentFileId) {
+        setMessageStyle(messageEl, "Error: Missing login or file ID.", false);
         return;
     }
+
+    messageEl.innerHTML = 'Deducting coins and initiating download... <span class="spinner"></span>';
+
+    // IMPORTANT: Call the secure server endpoint /download-and-redirect
+    // The server handles: 1. Coin check. 2. Coin deduction. 3. Generating a signed R2 URL. 4. Redirecting the client.
+    const redirectUrl = `${API_URL}/download-and-redirect?fileId=${encodeURIComponent(currentFileId)}&email=${encodeURIComponent(email)}`;
     
-    messageEl.innerHTML = 'Verifying User ID... <span class="spinner"></span>';
+    // Open the server-side redirect link in a new tab/window
+    window.open(redirectUrl, "_blank"); 
 
-    try {
-        // STEP 1: Connect to the server to verify the User ID
-        const verificationResponse = await fetch(`${API_URL}/api/user/verify`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            // Send the user ID to the server
-            body: JSON.stringify({ userId: userID }) 
-        });
+    setMessageStyle(messageEl, `Download process initiated. Check new tab.`, true);
 
-        if (!verificationResponse.ok) {
-            // Handle server-side errors, e.g., "User ID not found" or "Insufficient Coins"
-            const errorData = await verificationResponse.json();
-            throw new Error(errorData.message || "Verification failed. Please check your User ID.");
-        }
-        
-        // Assume successful verification if response.ok is true
-        // The server confirms the User ID is valid and authorized for download.
-        
-        messageEl.innerHTML = 'Verification successful! Initiating download... <span class="spinner"></span>';
-        
-        // STEP 2: Initiate Download using the verified User ID
-        const fileId = currentFileId;
-        const fileName = currentFileName;
-        
-        // Use the verified userID in the download request
-        const fileUrl = `${API_URL}/download-file?fileId=${encodeURIComponent(fileId)}&auth_id=${encodeURIComponent(userID)}`;
-        
-        window.open(fileUrl, "_blank"); 
-
-        setMessageStyle(messageEl, `Download process initiated for ${fileName}.`, true);
-        
-        setTimeout(() => {
-            document.getElementById("userIDConfirm").value = '';
-            hideModal('verificationModal');
-        }, 1500);
-
-    } catch (error) {
-        console.error('Download error:', error.message);
-        setMessageStyle(messageEl, `Error: ${error.message}`, false);
-    }
+    setTimeout(closePreview, 2500);
 }
 
 
 /* --- Initialization --- */
-
 window.onload = () => { loadDownloads(); };
 
 function setMessageStyle(el, msg, success) { 
@@ -363,4 +403,3 @@ function setMessageStyle(el, msg, success) {
 
 </body>
 </html>
-
