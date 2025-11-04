@@ -405,11 +405,24 @@ async function verifyPasswordAndDownload() {
 
       setTimeout(() => {
         hideModal('passwordModal');
-
-        // Proceed with actual download after verification
-        const redirectUrl = `${API_URL}/download-and-redirect?fileId=${encodeURIComponent(currentFileId)}&email=${encodeURIComponent(email)}`;
-        window.open(redirectUrl, "_blank");
         hideModal('previewModal');
+
+        // Generate the final download link
+        const redirectUrl = `${API_URL}/download-and-redirect?fileId=${encodeURIComponent(currentFileId)}&email=${encodeURIComponent(email)}`;
+
+        // If running inside Wix iframe → send message to parent
+        if (window !== window.parent) {
+          window.parent.postMessage(
+            {
+              type: "STUDYMINT_DOWNLOAD",
+              url: redirectUrl
+            },
+            "*"
+          );
+        } else {
+          // Running standalone → open directly
+          window.open(redirectUrl, "_blank");
+        }
       }, 800);
 
     } else {
@@ -421,6 +434,7 @@ async function verifyPasswordAndDownload() {
     messageEl.style.color = "#dc3545";
   }
 }
+
 
 function handlePasswordBackdropClick(event) {
   if (event.target.id === 'passwordModal') hideModal('passwordModal');
@@ -440,4 +454,5 @@ function setMessageStyle(el, msg, success) {
 
 </body>
 </html>
+
 
