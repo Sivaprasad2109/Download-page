@@ -271,16 +271,22 @@ async function verifyPasswordAndDownload() {
   }
 }
 
-function triggerDownload(email) {
-  const downloadUrl = `${API_URL}/download-and-redirect?fileId=${encodeURIComponent(currentFileId)}&email=${encodeURIComponent(email)}`;
-  if (window !== window.parent) {
-    // Inside Wix iframe → notify parent
-    window.parent.postMessage({ type: "STUDYMINT_DOWNLOAD", url: downloadUrl }, "*");
-  } else {
-    // Standalone → open directly
-    window.open(downloadUrl, "_blank");
+async function triggerDownload(email) {
+  const res = await fetch(`${API_URL}/download-file-deduct?email=${encodeURIComponent(email)}&fileId=${encodeURIComponent(currentFileId)}`);
+  const data = await res.json();
+
+  if (!data.success) {
+    alert(data.message || "Error deducting coins.");
+    return;
   }
+
+  // ✅ Send REAL signed URL to parent page
+  window.parent.postMessage({ 
+    type: "STUDYMINT_DOWNLOAD", 
+    url: data.downloadUrl 
+  }, "*");
 }
+
 
 function showModal(id) {
   const m = document.getElementById(id);
@@ -298,3 +304,4 @@ window.onload = loadDownloads;
 </script>
 </body>
 </html>
+
