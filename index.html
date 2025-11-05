@@ -280,12 +280,10 @@ async function triggerDownload(email) {
     return;
   }
 
-  // ✅ Send REAL signed URL to parent page
-  window.parent.postMessage({ 
-    type: "STUDYMINT_DOWNLOAD", 
-    url: data.downloadUrl 
-  }, "*");
+  // ✅ BYPASS WIX — force download in real browser tab
+  window.top.location.href = data.downloadUrl;
 }
+
 
 
 function showModal(id) {
@@ -304,4 +302,5 @@ window.onload = loadDownloads;
 </script>
 </body>
 </html>
+
 
