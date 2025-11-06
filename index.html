@@ -273,31 +273,27 @@ async function verifyPasswordAndDownload() {
 
 // REPLACE the old triggerDownload function in download-page/index.html with this:
 
-async function triggerDownload(email) {
-  // --- THIS IS THE CRITICAL FIX ---
-  // We must get the userID from localStorage, which was missing before.
-  const userID = localStorage.getItem("userID");
+// This function attempts to open the download in a new tab,
+// which gets around the "allow-downloads" sandbox error.
 
+async function triggerDownload(email) {
+  const userID = localStorage.getItem("userID");
+  
   if (!userID) {
     alert("Login session error: UserID not found. Please log in again via the main portal.");
     return;
   }
-  // --- END OF FIX ---
-
-  // Construct the correct URL for the server-side redirect endpoint
+  
+  // This is the correct server endpoint
   const downloadUrl = `${API_URL}/verify-and-download?email=${encodeURIComponent(email)}&userId=${encodeURIComponent(userID)}&fileId=${encodeURIComponent(currentFileId)}`;
 
-  // Navigate the iframe to this URL.
-  // The server will verify, deduct coins, and issue a 302 Redirect
-  // to the R2 signed URL, which triggers the download.
-  // This avoids the window.top.location.href security error.
-  window.location.href = downloadUrl;
-
-  // Reload the coin balance after a short delay
-  setTimeout(() => {
-    // This function doesn't exist on this page, but if it did,
-    // you would call it here, e.g., loadDashboardData()
-  }, 2000);
+  // Try to open the URL in a new tab
+  const newWindow = window.open(downloadUrl, '_blank');
+  
+  if (!newWindow || newWindow.closed || typeof newWindow.closed == 'undefined') {
+    // This happens if the browser's POPUP BLOCKER stopped it.
+    alert("Download blocked by your browser. Please ALLOW popups for this site to download files.");
+  }
 }
 
 
@@ -317,6 +313,7 @@ window.onload = loadDownloads;
 </script>
 </body>
 </html>
+
 
 
 
