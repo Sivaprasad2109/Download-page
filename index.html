@@ -233,6 +233,8 @@ function handleDownload(fileId) {
   showModal('passwordModal');
 }
 
+// REPLACE the old verifyPasswordAndDownload function with this one
+
 async function verifyPasswordAndDownload() {
   const email = localStorage.getItem("userEmail");
   const password = document.getElementById("confirmPasswordInput").value;
@@ -247,27 +249,56 @@ async function verifyPasswordAndDownload() {
   msg.innerHTML = "Verifying...";
 
   try {
-    const res = await fetch(`${API_URL}/verify-password`, {
+    // Step 1: Verify the password (same as before)
+    const passRes = await fetch(`${API_URL}/verify-password`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, password })
     });
-    const result = await res.json();
+    const passResult = await passRes.json();
 
-    if (result.success) {
-      msg.textContent = "Password verified ✅";
-      msg.style.color = "#28a745";
-      setTimeout(() => {
-        hideModal('passwordModal');
-        triggerDownload(email);
-      }, 700);
-    } else {
+    if (!passResult.success) {
       msg.textContent = "Incorrect password. Try again.";
       msg.style.color = "#dc3545";
+      return;
     }
+
+    // Step 2: Password is correct. Now, fetch the download URL as JSON text.
+    // We use /download-file-deduct which is already in your server.js
+    // and returns a JSON object { success: true, downloadUrl: '...' }
+    
+    msg.textContent = "Password verified ✅ Fetching download link...";
+    msg.style.color = "#28a745";
+
+    const downloadRes = await fetch(`${API_URL}/download-file-deduct?email=${encodeURIComponent(email)}&fileId=${encodeURIComponent(currentFileId)}`);
+    const downloadData = await downloadRes.json();
+
+    if (!downloadData.success || !downloadData.downloadUrl) {
+      // This happens if coin deduction failed or file not found
+      msg.textContent = downloadData.message || "Error deducting coins.";
+      msg.style.color = "#dc3545";
+      alert(downloadData.message || "Could not retrieve download link.");
+      return;
+    }
+
+    // Step 3: SUCCESS! We have the direct R2/Cloudflare URL.
+    // Now we open *that* URL in the new tab.
+    
+    hideModal('passwordModal');
+    const newWindow = window.open(downloadData.downloadUrl, '_blank');
+    
+    if (!newWindow || newWindow.closed || typeof newWindow.closed == 'undefined') {
+      alert("Download blocked by your browser. Please ALLOW popups for this site to download files.");
+    }
+
+    // Clear the password input for security
+    document.getElementById("confirmPasswordInput").value = "";
+    msg.textContent = "";
+
   } catch (err) {
     msg.textContent = "Server error. Try later.";
     msg.style.color = "#dc3545";
+    console.error("Download flow error:", err);
   }
 }
 
@@ -277,23 +308,6 @@ async function verifyPasswordAndDownload() {
 // which gets around the "allow-downloads" sandbox error.
 
 // In download-page/index.html - KEEP THIS CODE
-async function triggerDownload(email) {
-  const userID = localStorage.getItem("userID");
-
-  if (!userID) {
-    alert("Login session error: UserID not found. Please log in again via the main portal.");
-    return;
-  }
-
-  const downloadUrl = `${API_URL}/verify-and-download?email=${encodeURIComponent(email)}&userId=${encodeURIComponent(userID)}&fileId=${encodeURIComponent(currentFileId)}`;
-
-  const newWindow = window.open(downloadUrl, '_blank');
-
-  if (!newWindow || newWindow.closed || typeof newWindow.closed == 'undefined') {
-    alert("Download blocked by your browser. Please ALLOW popups for this site to download files.");
-  }
-}
-
 
 function showModal(id) {
   const m = document.getElementById(id);
@@ -311,6 +325,7 @@ window.onload = loadDownloads;
 </script>
 </body>
 </html>
+
 
 
 
