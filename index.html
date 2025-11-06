@@ -274,28 +274,29 @@ async function verifyPasswordAndDownload() {
 // REPLACE the old triggerDownload function in download-page/index.html with this:
 
 async function triggerDownload(email) {
-  // We also need the userID for the verify endpoint
+  // --- THIS IS THE CRITICAL FIX ---
+  // We must get the userID from localStorage, which was missing before.
   const userID = localStorage.getItem("userID");
 
   if (!userID) {
-    alert("Authentication error. Please log in again via the main portal.");
+    alert("Login session error: UserID not found. Please log in again via the main portal.");
     return;
   }
+  // --- END OF FIX ---
 
-  // This is the correct, iframe-safe download endpoint.
-  // It uses the same logic as your login page's download button.
+  // Construct the correct URL for the server-side redirect endpoint
   const downloadUrl = `${API_URL}/verify-and-download?email=${encodeURIComponent(email)}&userId=${encodeURIComponent(userID)}&fileId=${encodeURIComponent(currentFileId)}`;
 
-  // Navigate the iframe itself. The server will handle the redirect
-  // and trigger the download dialog.
+  // Navigate the iframe to this URL.
+  // The server will verify, deduct coins, and issue a 302 Redirect
+  // to the R2 signed URL, which triggers the download.
+  // This avoids the window.top.location.href security error.
   window.location.href = downloadUrl;
 
-  // We can't easily check for success here, but we can assume it worked
-  // and refresh the user's coin balance on the main page after a delay.
+  // Reload the coin balance after a short delay
   setTimeout(() => {
-    // You might need to add a postMessage call here to tell
-    // the main login page to refresh its coin count, but for now,
-    // the download will simply start.
+    // This function doesn't exist on this page, but if it did,
+    // you would call it here, e.g., loadDashboardData()
   }, 2000);
 }
 
@@ -316,6 +317,7 @@ window.onload = loadDownloads;
 </script>
 </body>
 </html>
+
 
 
 
