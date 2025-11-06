@@ -276,22 +276,20 @@ async function verifyPasswordAndDownload() {
 // This function attempts to open the download in a new tab,
 // which gets around the "allow-downloads" sandbox error.
 
+// In download-page/index.html - KEEP THIS CODE
 async function triggerDownload(email) {
   const userID = localStorage.getItem("userID");
-  
+
   if (!userID) {
     alert("Login session error: UserID not found. Please log in again via the main portal.");
     return;
   }
-  
-  // This is the correct server endpoint
+
   const downloadUrl = `${API_URL}/verify-and-download?email=${encodeURIComponent(email)}&userId=${encodeURIComponent(userID)}&fileId=${encodeURIComponent(currentFileId)}`;
 
-  // Try to open the URL in a new tab
   const newWindow = window.open(downloadUrl, '_blank');
-  
+
   if (!newWindow || newWindow.closed || typeof newWindow.closed == 'undefined') {
-    // This happens if the browser's POPUP BLOCKER stopped it.
     alert("Download blocked by your browser. Please ALLOW popups for this site to download files.");
   }
 }
@@ -313,6 +311,7 @@ window.onload = loadDownloads;
 </script>
 </body>
 </html>
+
 
 
 
