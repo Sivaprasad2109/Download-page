@@ -235,6 +235,8 @@ function handleDownload(fileId) {
 
 // REPLACE the old verifyPasswordAndDownload function with this one
 
+// REPLACE the function in download-page/index.html with this
+
 async function verifyPasswordAndDownload() {
   const email = localStorage.getItem("userEmail");
   const password = document.getElementById("confirmPasswordInput").value;
@@ -249,56 +251,48 @@ async function verifyPasswordAndDownload() {
   msg.innerHTML = "Verifying...";
 
   try {
-    // Step 1: Verify the password (same as before)
-    const passRes = await fetch(`${API_URL}/verify-password`, {
+    // Step 1: Verify the password (This is correct)
+    const res = await fetch(`${API_URL}/verify-password`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, password })
     });
-    const passResult = await passRes.json();
+    const result = await res.json();
 
-    if (!passResult.success) {
+    if (!result.success) {
       msg.textContent = "Incorrect password. Try again.";
       msg.style.color = "#dc3545";
       return;
     }
 
-    // Step 2: Password is correct. Now, fetch the download URL as JSON text.
-    // We use /download-file-deduct which is already in your server.js
-    // and returns a JSON object { success: true, downloadUrl: '...' }
-    
-    msg.textContent = "Password verified ✅ Fetching download link...";
+    // Step 2: Password is correct.
+    msg.textContent = "Password verified ✅ Initiating download...";
     msg.style.color = "#28a745";
 
-    const downloadRes = await fetch(`${API_URL}/download-file-deduct?email=${encodeURIComponent(email)}&fileId=${encodeURIComponent(currentFileId)}`);
-    const downloadData = await downloadRes.json();
+    // --- THIS IS THE FIX ---
+    // We will no longer call /download-file-deduct.
+    // We will now build the URL to the /download-file endpoint
+    // which streams the file directly from your server.
+    
+    const directDownloadUrl = `${API_URL}/download-file?email=${encodeURIComponent(email)}&fileId=${encodeURIComponent(currentFileId)}`;
 
-    if (!downloadData.success || !downloadData.downloadUrl) {
-      // This happens if coin deduction failed or file not found
-      msg.textContent = downloadData.message || "Error deducting coins.";
-      msg.style.color = "#dc3545";
-      alert(downloadData.message || "Could not retrieve download link.");
-      return;
-    }
-
-    // Step 3: SUCCESS! We have the direct R2/Cloudflare URL.
-    // Now we open *that* URL in the new tab.
+    // Step 3: Open the direct stream endpoint in a new tab.
+    // The server will send the file, forcing a download.
     
     hideModal('passwordModal');
-    const newWindow = window.open(downloadData.downloadUrl, '_blank');
+    const newWindow = window.open(directDownloadUrl, '_blank');
     
     if (!newWindow || newWindow.closed || typeof newWindow.closed == 'undefined') {
       alert("Download blocked by your browser. Please ALLOW popups for this site to download files.");
     }
 
-    // Clear the password input for security
+    // Clear password and message
     document.getElementById("confirmPasswordInput").value = "";
     msg.textContent = "";
 
   } catch (err) {
     msg.textContent = "Server error. Try later.";
     msg.style.color = "#dc3545";
-    console.error("Download flow error:", err);
   }
 }
 
@@ -325,6 +319,7 @@ window.onload = loadDownloads;
 </script>
 </body>
 </html>
+
 
 
 
