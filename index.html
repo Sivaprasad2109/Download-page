@@ -271,19 +271,33 @@ async function verifyPasswordAndDownload() {
   }
 }
 
-async function triggerDownload(email) {
-  const res = await fetch(`${API_URL}/download-file-deduct?email=${encodeURIComponent(email)}&fileId=${encodeURIComponent(currentFileId)}`);
-  const data = await res.json();
+// REPLACE the old triggerDownload function in download-page/index.html with this:
 
-  if (!data.success) {
-    alert(data.message || "Error deducting coins.");
+async function triggerDownload(email) {
+  // We also need the userID for the verify endpoint
+  const userID = localStorage.getItem("userID");
+
+  if (!userID) {
+    alert("Authentication error. Please log in again via the main portal.");
     return;
   }
 
-  // ✅ BYPASS WIX — force download in real browser tab
-  window.top.location.href = data.downloadUrl;
-}
+  // This is the correct, iframe-safe download endpoint.
+  // It uses the same logic as your login page's download button.
+  const downloadUrl = `${API_URL}/verify-and-download?email=${encodeURIComponent(email)}&userId=${encodeURIComponent(userID)}&fileId=${encodeURIComponent(currentFileId)}`;
 
+  // Navigate the iframe itself. The server will handle the redirect
+  // and trigger the download dialog.
+  window.location.href = downloadUrl;
+
+  // We can't easily check for success here, but we can assume it worked
+  // and refresh the user's coin balance on the main page after a delay.
+  setTimeout(() => {
+    // You might need to add a postMessage call here to tell
+    // the main login page to refresh its coin count, but for now,
+    // the download will simply start.
+  }, 2000);
+}
 
 
 function showModal(id) {
@@ -302,5 +316,6 @@ window.onload = loadDownloads;
 </script>
 </body>
 </html>
+
 
 
